@@ -18,11 +18,18 @@ from typing import Optional, List, Dict, Any, Literal
 from enum import Enum
 from datetime import datetime, time
 import json
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger("fittrack_mcp")
 
 # Initialize MCP server
 mcp = FastMCP("fittrack_mcp")
 
-app = mcp.http_app(path="/mcp")
 # Constants
 CHARACTER_LIMIT = 25000
 LATE_MEAL_WARNING_HOUR = 21  # 9 PM
@@ -550,17 +557,31 @@ REHAB_PROTOCOLS = {
 # ============================================================================
 
 def check_ac_joint_safety(exercise_name: str) -> Dict[str, Any]:
-    """Check if exercise is AC-joint safe"""
-    exercise_lower = exercise_name.lower()
-    
+    """Check if exercise is AC-joint safe
+
+    Args:
+        exercise_name: Name of the exercise to validate
+
+    Returns:
+        Dictionary with 'safe' boolean/None and 'reason' string
+    """
+    if not exercise_name or not exercise_name.strip():
+        return {
+            "safe": None,
+            "reason": "⚠️  No exercise name provided"
+        }
+
+    exercise_lower = exercise_name.lower().strip()
+
     # Check if explicitly unsafe
     for unsafe in AC_JOINT_UNSAFE:
         if unsafe.lower() in exercise_lower:
+            logger.info(f"Unsafe exercise detected: {exercise_name}")
             return {
                 "safe": False,
                 "reason": f"❌ {exercise_name} is NOT recommended for AC joint arthritis. Avoid wide-grip and flat bench pressing."
             }
-    
+
     # Check if explicitly safe
     for category, exercises in AC_JOINT_SAFE_EXERCISES.items():
         for safe_ex in exercises:
@@ -569,8 +590,9 @@ def check_ac_joint_safety(exercise_name: str) -> Dict[str, Any]:
                     "safe": True,
                     "reason": f"✅ {exercise_name} is AC-joint safe ({category} category)."
                 }
-    
+
     # Unknown exercise
+    logger.debug(f"Unknown exercise: {exercise_name}")
     return {
         "safe": None,
         "reason": f"⚠️  {exercise_name} not in database. Verify with these principles: avoid flat bench press, wide-grip movements, strict overhead press. Prefer scapular-plane pressing (30-45° angle), neutral grips, and landmine variations."
@@ -582,7 +604,17 @@ def calculate_hydration_needs(
     temp_f: int,
     sweat_rate: float
 ) -> Dict[str, Any]:
-    """Calculate hydration needs for hyperhidrosis"""
+    """Calculate hydration needs for hyperhidrosis
+
+    Args:
+        duration_min: Workout duration in minutes
+        intensity: RPE intensity string
+        temp_f: Ambient temperature in Fahrenheit
+        sweat_rate: Personal sweat rate in lbs/hour
+
+    Returns:
+        Dictionary with hydration recommendations
+    """
     # Base sweat rate adjustment by intensity
     intensity_multipliers = {
         "6 - Very light": 0.7,
@@ -627,9 +659,20 @@ def calculate_hydration_needs(
     }
 
 def check_late_meal_warning(meal_time_str: str) -> Optional[str]:
-    """Check if meal is after 9pm and provide guardrail warnings"""
-    hour = int(meal_time_str.split(':')[0])
-    minute = int(meal_time_str.split(':')[1])
+    """Check if meal is after 9pm and provide guardrail warnings
+
+    Args:
+        meal_time_str: Time string in HH:MM format
+
+    Returns:
+        Warning message string if late meal, None otherwise
+    """
+    try:
+        hour = int(meal_time_str.split(':')[0])
+        minute = int(meal_time_str.split(':')[1])
+    except (ValueError, IndexError) as e:
+        logger.error(f"Invalid meal time format: {meal_time_str}")
+        return None
     
     if hour >= LATE_MEAL_WARNING_HOUR or hour < 6:  # 9pm - 6am
         warnings = [
@@ -644,10 +687,20 @@ def check_late_meal_warning(meal_time_str: str) -> Optional[str]:
     return None
 
 def format_rehab_protocol(condition: str, phase_num: Optional[int], format_type: str) -> str:
-    """Format rehab protocol for output"""
+    """Format rehab protocol for output
+
+    Args:
+        condition: Rehab condition identifier
+        phase_num: Optional specific phase number (1-4)
+        format_type: Output format ('json' or 'markdown')
+
+    Returns:
+        Formatted protocol string
+    """
     protocol = REHAB_PROTOCOLS.get(condition)
     if not protocol:
-        return json.dumps({"error": "Protocol not found"}, indent=2)
+        logger.warning(f"Protocol not found: {condition}")
+        return json.dumps({"error": f"Protocol not found for condition: {condition}"}, indent=2)
     
     if format_type == "json":
         if phase_num:
@@ -691,9 +744,23 @@ def format_rehab_protocol(condition: str, phase_num: Optional[int], format_type:
 # MCP TOOLS
 # ============================================================================
 
-@mcp.tool()
+@mcp.tool(
+    name="ping",
+    annotations={
+        "title": "Health Check",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False
+    }
+)
 def ping() -> str:
-    "Simple health check."
+    """Simple health check endpoint to verify server is running.
+
+    Returns:
+        String 'pong' if server is healthy
+    """
+    logger.debug("Ping received")
     return "pong"
 
 @mcp.tool(
@@ -1013,5 +1080,10 @@ async def get_rehab_protocol(params: GetRehabProtocolInput) -> str:
 # SERVER ENTRY POINT
 # ============================================================================
 
+# Export ASGI app for cloud deployment (Vercel, Railway, etc.)
+# This allows the server to be imported and run via HTTP/SSE transport
+app = mcp.http_app(path="/mcp")
+
 if __name__ == "__main__":
+    # Run in stdio mode for local development
     mcp.run()

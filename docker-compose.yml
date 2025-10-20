@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  fittrack-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fittrack-mcp
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    # For HTTP/SSE mode
+    command: uvicorn fittrack_mcp:app --host 0.0.0.0 --port 8000
+
+    # For stdio mode, uncomment below and comment above
+    # command: python fittrack_mcp.py
+    # stdin_open: true
+    # tty: true
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import httpx; httpx.get(\"http://localhost:8000/mcp\").raise_for_status()' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    # Optional: add resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M

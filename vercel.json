@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "name": "fittrack-mcp",
+  "builds": [
+    {
+      "src": "fittrack_mcp.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "15mb"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/mcp/(.*)",
+      "dest": "fittrack_mcp.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "fittrack_mcp.py"
+    }
+  ],
+  "env": {
+    "PYTHONUNBUFFERED": "1"
+  }
+}

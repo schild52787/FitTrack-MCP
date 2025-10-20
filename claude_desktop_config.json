@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "fittrack": {
+      "command": "python",
+      "args": [
+        "/absolute/path/to/FitTrack-MCP/fittrack_mcp.py"
+      ],
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}

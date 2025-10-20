@@ -1,0 +1,94 @@
+{
+  "name": "FitTrack MCP Server",
+  "version": "1.0.0",
+  "description": "Comprehensive fitness and rehab tracker with AC-joint safe exercise validation, hyperhidrosis-aware hydration, and evidence-based PT protocols",
+  "server": {
+    "command": "python",
+    "args": ["fittrack_mcp.py"],
+    "env": {
+      "PYTHONUNBUFFERED": "1"
+    }
+  },
+  "http": {
+    "path": "/mcp",
+    "port": 8000
+  },
+  "tools": [
+    {
+      "name": "ping",
+      "description": "Health check endpoint to verify server is running",
+      "readOnly": true
+    },
+    {
+      "name": "log_workout",
+      "description": "Log workout sessions with AC-joint safety validation and RPE tracking",
+      "parameters": {
+        "exercise_name": "string (required)",
+        "sets": "integer 1-10 (required)",
+        "reps": "integer 1-50 (required)",
+        "weight_lbs": "float (optional)",
+        "rpe": "string from RPE scale (required)",
+        "notes": "string max 500 chars (optional)",
+        "response_format": "markdown|json (optional, default: markdown)"
+      },
+      "readOnly": false
+    },
+    {
+      "name": "calculate_hydration",
+      "description": "Calculate hydration and electrolyte needs for hyperhidrosis based on workout parameters",
+      "parameters": {
+        "workout_duration_minutes": "integer 15-240 (required)",
+        "intensity": "string from RPE scale (required)",
+        "ambient_temp_f": "integer 40-110 (optional, default: 72)",
+        "sweat_rate_lbs_per_hour": "float 1.0-5.0 (optional, default: 2.5)",
+        "response_format": "markdown|json (optional, default: markdown)"
+      },
+      "readOnly": true
+    },
+    {
+      "name": "log_nutrition",
+      "description": "Log meals with late-meal guardrails (9pm+ warnings)",
+      "parameters": {
+        "meal_time": "string HH:MM 24-hour format (required)",
+        "meal_description": "string max 200 chars (required)",
+        "protein_g": "integer 0-300 (optional)",
+        "carbs_g": "integer 0-500 (optional)",
+        "fat_g": "integer 0-200 (optional)",
+        "calories": "integer 0-5000 (optional)",
+        "response_format": "markdown|json (optional, default: markdown)"
+      },
+      "readOnly": false
+    },
+    {
+      "name": "get_exercise_library",
+      "description": "Browse AC-joint safe exercises filtered by category or search term",
+      "parameters": {
+        "category": "pressing|pulling|lower_body|serratus_lower_trap|core|rehab (optional)",
+        "search_term": "string max 50 chars (optional)",
+        "response_format": "markdown|json (optional, default: markdown)"
+      },
+      "readOnly": true
+    },
+    {
+      "name": "get_rehab_protocol",
+      "description": "Access evidence-based rehab protocols for 6 conditions with detailed exercises and progressions",
+      "parameters": {
+        "condition": "ac_joint_arthritis|bicep_tendonitis|cervical_spine_arthritis|scapular_winging|ankle_post_surgery|meniscus_post_surgery (required)",
+        "phase": "integer 1-4 (optional)",
+        "response_format": "markdown|json (optional, default: markdown)"
+      },
+      "readOnly": true
+    }
+  ],
+  "features": {
+    "ac_joint_validation": "Automatically validates exercises for AC joint arthritis safety",
+    "hyperhidrosis_support": "Personalized hydration calculations for heavy sweaters",
+    "late_meal_warnings": "Guardrails for meals after 9pm",
+    "rpe_tracking": "Rate of Perceived Exertion scale (6-10)",
+    "rehab_protocols": "Evidence-based PT protocols for 6 common conditions"
+  },
+  "constraints": {
+    "character_limit": 25000,
+    "late_meal_hour": 21
+  }
+}
