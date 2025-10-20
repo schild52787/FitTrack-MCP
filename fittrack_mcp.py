@@ -22,6 +22,7 @@ import json
 # Initialize MCP server
 mcp = FastMCP("fittrack_mcp")
 
+app = mcp.http_app(path="/mcp")
 # Constants
 CHARACTER_LIMIT = 25000
 LATE_MEAL_WARNING_HOUR = 21  # 9 PM
