@@ -690,6 +690,11 @@ def format_rehab_protocol(condition: str, phase_num: Optional[int], format_type:
 # MCP TOOLS
 # ============================================================================
 
+@mcp.tool()
+def ping() -> str:
+    "Simple health check."
+    return "pong"
+
 @mcp.tool(
     name="log_workout",
     annotations={
