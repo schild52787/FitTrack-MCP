@@ -1,3 +1,3 @@
-fastmcp
-httpx
-pydantic
+fastmcp>=2.12
+httpx>=0.27
+pydantic>=2.8
