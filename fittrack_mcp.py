@@ -1082,7 +1082,13 @@ async def get_rehab_protocol(params: GetRehabProtocolInput) -> str:
 
 # Export ASGI app for cloud deployment (Vercel, Railway, etc.)
 # This allows the server to be imported and run via HTTP/SSE transport
-app = mcp.http_app(path="/mcp")
+# Note: http_app() requires FastMCP 3.0+, for older versions use stdio only
+try:
+    app = mcp.http_app(path="/mcp")
+except AttributeError:
+    # http_app not available in this version, stdio mode only
+    logger.info("HTTP/SSE mode not available in this FastMCP version. Using stdio mode only.")
+    app = None
 
 if __name__ == "__main__":
     # Run in stdio mode for local development
